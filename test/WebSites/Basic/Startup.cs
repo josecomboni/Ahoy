@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.Swagger.Model;
+using Swashbuckle.SwaggerGen.Generator;
 using Basic.Swagger;
 
 namespace Basic
@@ -48,6 +49,8 @@ namespace Basic
 
                 c.OperationFilter<AssignOperationVendorExtensions>();
                 c.OperationFilter<FormDataOperationFilter>();
+
+                c.OrderActionsBy((apiDesc) => $"{apiDesc.ControllerName()}_{apiDesc.HttpMethod}");
             });
 
             if (_hostingEnv.IsDevelopment())

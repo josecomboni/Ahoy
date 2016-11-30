@@ -26,7 +26,7 @@ namespace Swashbuckle.SwaggerGen.Generator
                 : controllerActionDescriptor.MethodInfo.GetCustomAttributes(false);
         }
 
-        internal static string ControllerName(this ApiDescription apiDescription)
+        public static string ControllerName(this ApiDescription apiDescription)
         {
             var controllerActionDescriptor = apiDescription.ControllerActionDescriptor();
             return (controllerActionDescriptor == null) ? null : controllerActionDescriptor.ControllerName;
