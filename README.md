@@ -266,7 +266,7 @@ services.AddSwaggerGen(c =>
 })
 ```
 
-_Take special note of the first argument to _SwaggerDoc_. It MUST be a URI-friendly name that uniquely identifies the document. It's subsequently used to make up the path for requesting the corresponding Swagger JSON. For example, with the default routing, the above documents will be available at "/swagger/v1/swagger.json" and "/swagger/v2/swagger.json"._
+_Take note of the first argument to SwaggerDoc. It MUST be a URI-friendly name that uniquely identifies the document. It's subsequently used to make up the path for requesting the corresponding Swagger JSON. For example, with the default routing, the above documents will be available at "/swagger/v1/swagger.json" and "/swagger/v2/swagger.json"._
 
 Next, you'll need to inform Swashbuckle which actions to include in each document. The generator uses the _ApiDescription.GroupName_ property, part of the built-in metadata layer that ships with ASP.NET Core, to make this distinction. You can set this by decorating individual actions OR by applying an application wide convention.
 
@@ -398,7 +398,7 @@ services.AddSwaggerGen(c =>
 
 ### Change Operation Sort Order (e.g. for UI Sorting) ###
 
-By default, actions are ordered by assigned tag (see above) before they're grouped into the path-based, hierarchichal structure imposed by the [Swagger spec](http://swagger.io/specification). You change this behavior with a custom sorting strategy:
+By default, actions are ordered by assigned tag (see above) before they're grouped into the path-based, hierarchichal structure imposed by the [Swagger spec](http://swagger.io/specification). You can change this behavior with a custom sorting strategy:
 
 ```csharp
 services.AddSwaggerGen(c =>
@@ -413,14 +413,7 @@ _NOTE: This dictates the sort order BEFORE actions are grouped and transformed i
 
 ### Customize Schema Id's ###
  
-If the generator encounters complex action parameter or response types, it will generate a corresponding JSON Schema, add it to the global "definitions" dictionary, and reference the definition in the operation description by unique Id. The id will be based on the underlying type name. For example ...
-
-```csharp
-[HttpPost("{id}")]
-public Product GetById(int id)
-```
-
-Will produce the following response metadata:
+If the generator encounters complex parameter or response types, it will generate a corresponding JSON Schema, add it to the global "definitions" dictionary, and reference it from the operation description by unique Id. For example, if you have an action that returns a "Product" type, the generated schema will be referenced as follows:
 
 ```
 responses: {
@@ -433,7 +426,7 @@ responses: {
 } 
 ```
 
-If you have multiple API types called with the same name (e.g. "RequestModels.Product" & "ResponseModels.Product"), then Swashbuckle will raise an exception due to "Conflicting schemaIds". In this case, you'll need to provide a custom Id strategy that further qualifies the name:
+However, if it encounters multiple "Product" classes under different namespaces (e.g. "RequestModels.Product" & "ResponseModels.Product"), then Swashbuckle will raise an exception due to "Conflicting schemaIds". In this case, you'll need to provide a custom Id strategy that further qualifies the name:
 
 ```csharp
 services.AddSwaggerGen(c =>
@@ -446,7 +439,21 @@ services.AddSwaggerGen(c =>
 
 ### Customize Schema for Enum Types ###
 
-TODO:
+When describing parameters and responses, Swashbuckle does its best to reflect the application's serialization settings. For example, if the _CamelCaseContractResolver_ is enabled, Schema property names will be camelCased in the generated Swagger. If it's disabled, they'll be PascalCased.
+
+Similarly for enum types, if the _StringEnumConverter_ is enabled, then the corresponding Schema will list the enum names. If not, they'll list the integer values.
+
+For most cases this should be sufficient. However, if you need more control, Swashbuckle exposes the following options to override the default behavior:
+
+```csharp
+services.AddSwaggerGen(c =>
+{
+    ...
+
+    c.DescribeAllEnumsAsStrings();
+    c.DescribeStringEnumsInCamelCase();
+};
+```
 
 ### Override Schema for Specific Types ###
 
