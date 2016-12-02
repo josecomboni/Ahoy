@@ -59,8 +59,7 @@ Swashbuckle consists of three packages - a Swagger generator, middleware to expo
 
 # Configuration & Customization #
 
-The steps described above will get you up and running with minimal setup. However, Swashbuckle offers a lot of flexibility to customize as you see fit. Check out the table below for a complete listing of configuration 
-and customization options:
+The steps described above will get you up and running with minimal setup. However, Swashbuckle offers a lot of flexibility to customize as you see fit. Check out the table below for the full list of options:
 
 * [Swashbuckle.Swagger](#)
  
@@ -181,7 +180,7 @@ responses: {
 
 ### Include Descriptions from XML Comments ###
 
-To enhance the generated docs with human-friendly descriptions, you can annotate controllers and models with [Xml Comments](http://msdn.microsoft.com/en-us/library/b2s063f7(v=vs.110).aspx), and configure Swashbuckle to incorporate those comments into the outputted Swagger JSON:
+To enhance the generated docs with human-friendly descriptions, you can annotate controllers and models with [Xml Comments](http://msdn.microsoft.com/en-us/library/b2s063f7(v=vs.110).aspx) and configure Swashbuckle to incorporate those comments into the outputted Swagger JSON:
 
 1. Open the Properties dialog for your project, click the "Build" tab and ensure that "XML documentation file" is checked. This will produce a file containing all XML comments at build-time.
 
@@ -326,7 +325,6 @@ The [Swagger spec](http://swagger.io/specification/) includes a "deprecated" fla
 services.AddSwaggerGen(c =>
 {
     ...
-
     c.IgnoreObsoleteActions();
 };
 ```
@@ -337,7 +335,6 @@ A similar approach can also be used to omit obsolete properties from Schema's in
 services.AddSwaggerGen(c =>
 {
     ...
-
     c.IgnoreObsoleteProperties();
 };
 ```
@@ -391,7 +388,6 @@ You can override the default tag by providing a function that applies tags by co
 services.AddSwaggerGen(c =>
 {
     ...
-
     c.TagActionsBy(api => api.HttpMethod);
 };
 ```
@@ -404,12 +400,11 @@ By default, actions are ordered by assigned tag (see above) before they're group
 services.AddSwaggerGen(c =>
 {
     ...
-
     c.OrderActionsBy((apiDesc) => $"{apiDesc.ControllerName()}_{apiDesc.HttpMethod}");
 };
 ```
 
-_NOTE: This dictates the sort order BEFORE actions are grouped and transformed into the Swagger format. So, it affects the ordering of groups (i.e. PathItems), and the ordering of operations within a group, in the Swagger output._
+_NOTE: This dictates the sort order BEFORE actions are grouped and transformed into the Swagger format. So, it affects the ordering of groups (i.e. Swagger PathItems), AND the ordering of operations within a group, in the Swagger output._
 
 ### Customize Schema Id's ###
  
@@ -432,7 +427,6 @@ However, if it encounters multiple "Product" classes under different namespaces 
 services.AddSwaggerGen(c =>
 {
     ...
-
     c.CustomSchemaIds((type) => type.FullName);
 };
 ```
@@ -441,7 +435,7 @@ services.AddSwaggerGen(c =>
 
 When describing parameters and responses, Swashbuckle does its best to reflect the application's serialization settings. For example, if the _CamelCaseContractResolver_ is enabled, Schema property names will be camelCased in the generated Swagger. If it's disabled, they'll be PascalCased.
 
-Similarly for enum types, if the _StringEnumConverter_ is enabled, then the corresponding Schema will list the enum names. If not, they'll list the integer values.
+Similarly for enum types, if the _StringEnumConverter_ is enabled, then the corresponding Schema's will list enum names. If not, they'll list the integer values.
 
 For most cases this should be sufficient. However, if you need more control, Swashbuckle exposes the following options to override the default behavior:
 
@@ -449,7 +443,6 @@ For most cases this should be sufficient. However, if you need more control, Swa
 services.AddSwaggerGen(c =>
 {
     ...
-
     c.DescribeAllEnumsAsStrings();
     c.DescribeStringEnumsInCamelCase();
 };
@@ -457,9 +450,98 @@ services.AddSwaggerGen(c =>
 
 ### Override Schema for Specific Types ###
 
-TODO:
+Out-of-the-box, Swashbuckle does a decent job at generating JSON Schema's that accurately describe your request and response payloads. However, if you're customizing serialization behavior for certain types in your API, you may need to help it out.
+
+For example, you might have a class with muliple properties that you want to represent in JSON as a comma-separated string. To do this you would probably implement a custom _JsonConverter_. In this case, Swashbuckle doesn't know how the converter is implemented and so you would need to provide it with a Schema that accurately describes the type:
+
+```csharp
+// PhoneNumber.cs
+public class PhoneNumber
+{
+    public string CountryCode { get; set; }
+
+    public string AreaCode { get; set; }
+
+    public string SubscriberId { get; set; }
+}
+
+// Startup.cs
+services.AddSwaggerGen(c =>
+{
+    ...
+    c.MapType<PhoneNumber>(() => new Schema { Type = "string" });
+};
+```
 
 ### Extend Generator with Operation, Schema & Document Filters ###
+
+Swashbuckle exposes a filter pipeline that hooks into the generation process. Once generated, individual metadata objects are passed into the pipeline where they can be modified further. You can wire up one or more custom filters for Operation, Schema and Document objects:
+
+#### Operation Filters ####
+
+Swashbuckle retrieves an _ApiDescription_, part of ASP.NET Core, for every action and uses it to generate a corresponding _Swagger Operation_. Once generated, it passes the _Operation_ and the _ApiDescription_ through the list of configured Operation Filters.
+
+In a typical filter implementation, you inspect the _ApiDescription_ for relevant information (e.g. route info, action attributes etc.) and then update the Swagger _Operation_ accordingly. For example, the following filter lists an additional "401" response if the action is decorated with the _AuthorizeAttribute_:
+
+```csharp
+// AuthResponsesOperationFilter.cs
+public class AuthResponsesOperationFilter : IOperationFilter
+{
+    public void Apply(Operation operation, OperationFilterContext context)
+    {
+        var authAttributes = context.ApiDescription
+            .ControllerAttributes()
+            .Union(context.ApiDescription.ActionAttributes())
+            .OfType<AuthorizeAttribute>();
+
+        if (authAttributes.Any())
+            operation.Responses.Add("401", new Response { Description = "Unauthorized" });
+    }
+}
+
+// Startup.cs
+services.AddSwaggerGen(c =>
+{
+    ...
+    c.OperationFilter<AuthResponsesOperationFilter>();
+};
+```
+
+_NOTE: Filter pipelines are DI-aware. That is, you can create filters with constructor parameters and if the corresponding types are registered with the DI framework, they'll be automatically injected when the filters are instantiated_
+
+#### Schema Filters ####
+
+Swashbuckle generates a Swagger-flavored _[JSONSchema](http://swagger.io/specification/#schemaObject)_ for every parameter, response and property type that's exposed by your action. Once generated, it passes the _Schema_ and _Type_ through the list of configured Document Filters.
+
+As an example, the following filter adds an AutoRest vendor extension (see https://github.com/Azure/autorest/blob/master/docs/extensions/readme.md#x-ms-enum) to inform the AutoRest tool how enums should be modelled when it generates the API client.
+
+```csharp
+// AutoRestSchemaFilter.cs
+public class AutoRestSchemaFilter : ISchemaFilter
+{
+    public void Apply(Schema schema, SchemaFilterContext context)
+    {
+        var typeInfo = context.SystemType.GetTypeInfo();
+
+        if (typeInfo.IsEnum)
+        {
+            schema.Extensions.Add(
+                "x-ms-enum",
+                new { name = typeInfo.Name,  modelAsString = true }
+            );
+        };
+    }
+}
+
+// Startup.cs
+services.AddSwaggerGen(c =>
+{
+    ...
+    c.SchemaFilter<AutoRestSchemaFilter>();
+};
+```
+
+#### Document Filters ####
 
 TODO:
 
