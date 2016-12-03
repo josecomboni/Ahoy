@@ -481,7 +481,7 @@ Swashbuckle exposes a filter pipeline that hooks into the generation process. On
 
 Swashbuckle retrieves an _ApiDescription_, part of ASP.NET Core, for every action and uses it to generate a corresponding _Swagger Operation_. Once generated, it passes the _Operation_ and the _ApiDescription_ through the list of configured Operation Filters.
 
-In a typical filter implementation, you inspect the _ApiDescription_ for relevant information (e.g. route info, action attributes etc.) and then update the Swagger _Operation_ accordingly. For example, the following filter lists an additional "401" response if the action is decorated with the _AuthorizeAttribute_:
+In a typical filter implementation, you inspect the _ApiDescription_ for relevant information (e.g. route info, action attributes etc.) and then update the Swagger _Operation_ accordingly. For example, the following filter lists an additional "401" response for all actions that are decorated with the _AuthorizeAttribute_:
 
 ```csharp
 // AuthResponsesOperationFilter.cs
@@ -511,9 +511,9 @@ _NOTE: Filter pipelines are DI-aware. That is, you can create filters with const
 
 #### Schema Filters ####
 
-Swashbuckle generates a Swagger-flavored _[JSONSchema](http://swagger.io/specification/#schemaObject)_ for every parameter, response and property type that's exposed by your action. Once generated, it passes the _Schema_ and _Type_ through the list of configured Document Filters.
+Swashbuckle generates a Swagger-flavored _[JSONSchema](http://swagger.io/specification/#schemaObject)_ for every parameter, response and property type that's exposed by your controller actions. Once generated, it passes the _Schema_ and _Type_ through the list of configured Schema Filters.
 
-As an example, the following filter adds an AutoRest vendor extension (see https://github.com/Azure/autorest/blob/master/docs/extensions/readme.md#x-ms-enum) to inform the AutoRest tool how enums should be modelled when it generates the API client.
+The example below adds an AutoRest vendor extension (see https://github.com/Azure/autorest/blob/master/docs/extensions/readme.md#x-ms-enum) to inform the AutoRest tool how enums should be modelled when it generates the API client.
 
 ```csharp
 // AutoRestSchemaFilter.cs
@@ -543,7 +543,24 @@ services.AddSwaggerGen(c =>
 
 #### Document Filters ####
 
-TODO:
+Once a _Swagger Document_ has been generated, it too can be passed through a set of pre-configured Document Filters. This gives full control to modify the document however you see fit. To ensure you're still returning valid Swagger JSON, you should have a read through the [specification](http://swagger.io/specification/) before using this filter type.
+
+The example below provides a description for any tags that are assigned to operations in the document:
+
+```csharp
+public class TagDescriptionsDocumentFilter : IDocumentFilter
+{
+    public void Apply(SwaggerDocument swaggerDoc, DocumentFilterContext context)
+    {
+        swaggerDoc.Tags = new[] {
+            new Tag { Name = "Products", Description = "Browse/manage the product catalog" },
+            new Tag { Name = "Orders", Description = "Submit orders" }
+        };
+    }
+}
+```
+
+_NOTE: If you're using the SwaggerUi middleware, this approach can be used to display additional descriptions beside each group of Operations._
 
 ### Add Security Definitions and Requirements ###
 
