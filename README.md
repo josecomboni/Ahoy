@@ -564,4 +564,11 @@ _NOTE: If you're using the SwaggerUi middleware, this approach can be used to di
 
 ### Add Security Definitions and Requirements ###
 
+In Swagger, you can describe how your API is secured by defining one or more _Security Scheme's_ (e.g basic, api key, oauth etc.) and declaring which of those schemes are applicable globally OR for specific operations. For more details, take a look at the _securityDefinitions_ and _security_ fields in the [Swagger spec](http://swagger.io/specification/#swaggerObject).
+
+You can use a combination of configuration options to include security metadata in the generated _Swagger Document_. The example below adds an [OAuth 2.0](https://oauth.net/2/) definition to the global metadata and a corresponding _Operation Filter_ that uses the presence of an _AuthorizeAttribute_ to determine which operations the scheme applies to.
+
+
+
+
 TODO:
